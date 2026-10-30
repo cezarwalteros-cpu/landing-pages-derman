@@ -1,9 +1,12 @@
 import { useState } from 'react';
-import { GALLERY } from '../config';
+import { GALLERY_DEFAULT } from '../config';
+import { useT } from '../lib/textos';
 
 export function Gallery() {
+  const t = useT();
+  const images = GALLERY_DEFAULT.map((g) => ({ ...g, src: t(g.key) || g.src })).filter((g) => g.src);
   const [active, setActive] = useState(0);
-  const img = GALLERY[active];
+  const img = images[Math.min(active, images.length - 1)];
 
   return (
     <div>
@@ -17,9 +20,9 @@ export function Gallery() {
         />
       </div>
       <div className="mt-3 grid grid-cols-6 gap-2">
-        {GALLERY.map((g, i) => (
+        {images.map((g, i) => (
           <button
-            key={g.src}
+            key={g.key}
             type="button"
             onClick={() => setActive(i)}
             aria-label={`Ver imagen: ${g.alt}`}

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { DEFAULT_BUNDLE, GIF_SLOTS, NSOC, BUNDLES, type Bundle } from './config';
+import { BUNDLES, DEFAULT_BUNDLE, GIF_DEFAULT, NSOC } from './config';
 import { Header, TopBar } from './components/Header';
 import { Gallery } from './components/Gallery';
 import { BuyBox } from './components/BuyBox';
@@ -7,16 +7,29 @@ import { Awareness, Comparison, GifSlot, Ingredients, Privacy } from './componen
 import { OrderForm } from './components/OrderForm';
 import { Faq } from './components/Faq';
 import { initPixel, pixel, track } from './lib/tracking';
+import { loadConfig, type Shipping } from './lib/checkout';
 import { LOREM, useT } from './lib/textos';
 
 export default function App() {
   const t = useT();
-  const [selected, setSelected] = useState<Bundle['id']>(DEFAULT_BUNDLE);
+  const [bundles, setBundles] = useState(BUNDLES);
+  const [selected, setSelected] = useState<string>(DEFAULT_BUNDLE);
+  const [shipping, setShipping] = useState<Shipping>({
+    standard: { title: 'Estándar', description: 'Llega en 3 a 4 días hábiles' },
+    priority: { title: 'Express', description: 'Despacho con prioridad y envío asegurado', price: 5000 },
+  });
   const scrolled = useRef({ s50: false, s90: false });
 
   useEffect(() => {
     initPixel();
     track('page_view');
+    pixel('ViewContent', { value: 179800, currency: 'COP', content_name: 'DERMAN' });
+    loadConfig().then((c) => {
+      if (!c) return;
+      setBundles(c.bundles);
+      setShipping(c.shipping);
+      setSelected((cur) => (c.bundles.some((b) => b.id === cur) ? cur : c.defaultId ?? c.bundles[0].id));
+    });
     const onScroll = () => {
       const h = document.documentElement;
       const pct = (h.scrollTop + window.innerHeight) / h.scrollHeight;
@@ -33,15 +46,13 @@ export default function App() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const select = (id: Bundle['id']) => {
+  const select = (id: string) => {
     setSelected(id);
     track('plan_select', { plan: id });
   };
 
   const goToOrder = () => {
-    const b = BUNDLES.find((x) => x.id === selected)!;
     track('cta_click', { plan: selected });
-    pixel('InitiateCheckout', { value: b.price, currency: 'COP', num_items: b.units });
     document.getElementById('pedido')?.scrollIntoView({ behavior: 'smooth' });
   };
 
@@ -53,28 +64,26 @@ export default function App() {
       <main>
         <section className="mx-auto grid max-w-5xl gap-6 px-4 py-6 md:grid-cols-2 md:gap-10 md:py-10">
           <Gallery />
-          <BuyBox selected={selected} onSelect={select} onOrder={goToOrder} />
+          <BuyBox bundles={bundles} selected={selected} onSelect={select} onOrder={goToOrder} />
         </section>
 
-        <GifSlot src={GIF_SLOTS.textura} label="Textura ligera que se absorbe al instante" badge="Textura y absorción" />
+        <GifSlot src={t('img.gif1') || GIF_DEFAULT.textura} label="Textura ligera que se absorbe al instante" badge="Textura y absorción" />
 
         <Awareness />
         <Ingredients />
 
-        <GifSlot src={GIF_SLOTS.aplicacion} label={t('gif2.leyenda', LOREM.t)} badge="Mecanismo de acción" />
+        <GifSlot src={t('img.gif2') || GIF_DEFAULT.mecanismo} label={t('gif2.leyenda', LOREM.t)} badge="Mecanismo de acción" />
 
         <Privacy />
         <Comparison />
-        <OrderForm selected={selected} onSelect={select} />
+        <OrderForm bundles={bundles} selected={selected} onSelect={select} shipping={shipping} />
         <Faq />
       </main>
 
       <footer className="border-t border-slate-200 bg-slate-50 px-4 py-8 text-center text-xs leading-relaxed text-slate-500">
         <p className="font-semibold text-slate-700">DERMAN™ Dermocare</p>
         <p className="mt-1">Notificación Sanitaria Obligatoria INVIMA {NSOC}</p>
-        <p className="mx-auto mt-2 max-w-xl">
-          {t('footer.legal')}
-        </p>
+        <p className="mx-auto mt-2 max-w-xl">{t('footer.legal')}</p>
       </footer>
     </div>
   );

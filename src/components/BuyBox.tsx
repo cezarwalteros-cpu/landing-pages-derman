@@ -1,15 +1,16 @@
 import { CheckCircle2, HandCoins, Package, ShieldCheck, Star } from 'lucide-react';
-import { BUNDLES, NSOC, UNIT_PRICE, type Bundle } from '../config';
+import { NSOC, UNIT_PRICE, type Bundle } from '../config';
 import { copShort } from '../lib/format';
 import { LOREM, useT } from '../lib/textos';
 
 type Props = {
-  selected: Bundle['id'];
-  onSelect: (id: Bundle['id']) => void;
+  bundles: Bundle[];
+  selected: string;
+  onSelect: (id: string) => void;
   onOrder: () => void;
 };
 
-export function BuyBox({ selected, onSelect, onOrder }: Props) {
+export function BuyBox({ bundles, selected, onSelect, onOrder }: Props) {
   const t = useT();
   const rating = parseFloat(t('reviews.rating').replace(',', '.'));
   const conteo = parseInt(t('reviews.conteo').replace(/\D/g, ''), 10);
@@ -38,9 +39,9 @@ export function BuyBox({ selected, onSelect, onOrder }: Props) {
 
       <fieldset className="mt-5 space-y-3">
         <legend className="mb-1 text-sm font-semibold text-slate-700">Elige tu pack:</legend>
-        {BUNDLES.map((b) => {
+        {bundles.map((b) => {
           const isSel = b.id === selected;
-          const regular = b.units * UNIT_PRICE;
+          const regular = b.compare || b.units * UNIT_PRICE;
           const saving = regular - b.price;
           return (
             <label

@@ -1,4 +1,4 @@
-import { FUNNEL_ENDPOINT, FUNNEL_PAGE, META_PIXEL_ID, STORE_SLUG } from '../config';
+import { FUNNEL_ENDPOINT, FUNNEL_PAGE, META_PIXEL_ID } from '../config';
 
 declare global {
   interface Window {
@@ -7,58 +7,56 @@ declare global {
   }
 }
 
-export type Utms = {
-  utm_source: string | null;
-  utm_medium: string | null;
-  utm_campaign: string | null;
-  utm_content: string | null;
-  utm_term: string | null;
-  fbclid: string | null;
-  ttclid: string | null;
-};
-
-const UTM_KEY = 'derman_utms';
+const UTM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbclid', 'ttclid'] as const;
+type UtmKey = (typeof UTM_KEYS)[number];
+export type Utms = Partial<Record<UtmKey, string>>;
 
 export function getUtms(): Utms {
-  const p = new URLSearchParams(window.location.search);
-  const fromUrl: Utms = {
-    utm_source: p.get('utm_source'),
-    utm_medium: p.get('utm_medium'),
-    utm_campaign: p.get('utm_campaign'),
-    utm_content: p.get('utm_content'),
-    utm_term: p.get('utm_term'),
-    fbclid: p.get('fbclid'),
-    ttclid: p.get('ttclid'),
-  };
-  const hasAny = Object.values(fromUrl).some(Boolean);
-  try {
-    if (hasAny) {
-      sessionStorage.setItem(UTM_KEY, JSON.stringify(fromUrl));
-      return fromUrl;
+  const qs = new URLSearchParams(window.location.search);
+  const out: Utms = {};
+  for (const k of UTM_KEYS) {
+    let v = qs.get(k);
+    try {
+      if (v) sessionStorage.setItem('dm_' + k, v);
+      else v = sessionStorage.getItem('dm_' + k);
+    } catch {
+      /* storage bloqueado */
     }
-    const saved = sessionStorage.getItem(UTM_KEY);
-    if (saved) return JSON.parse(saved) as Utms;
-  } catch {
-    /* storage bloqueado: seguimos con lo de la URL */
+    if (v) out[k] = v;
   }
-  return fromUrl;
+  return out;
 }
 
 function sessionId(): string {
-  const key = 'derman_sid';
   try {
-    let sid = sessionStorage.getItem(key);
+    let sid = sessionStorage.getItem('dm_sid');
     if (!sid) {
-      sid = Math.random().toString(36).slice(2) + Date.now().toString(36);
-      sessionStorage.setItem(key, sid);
+      sid = 'dm-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      sessionStorage.setItem('dm_sid', sid);
     }
     return sid;
   } catch {
-    return 'nosid-' + Date.now().toString(36);
+    return 'dm-' + Date.now().toString(36);
   }
 }
 
 export const SID = sessionId();
+
+const cookie = (n: string) => {
+  const m = document.cookie.match(new RegExp('(?:^|; )' + n + '=([^;]*)'));
+  return m ? decodeURIComponent(m[1]) : null;
+};
+
+// Lo que el checkout guarda con el pedido (atribución por anuncio + CAPI)
+export function trackingPayload() {
+  return {
+    ...getUtms(),
+    fbp: cookie('_fbp'),
+    fbc: cookie('_fbc'),
+    landing_url: window.location.href.split('#')[0].slice(0, 300),
+    user_agent: navigator.userAgent.slice(0, 300),
+  };
+}
 
 type FunnelEvent = 'page_view' | 'plan_select' | 'cta_click' | 'scroll_50' | 'scroll_90';
 
@@ -68,7 +66,7 @@ export function track(ev: FunnelEvent, extra?: Record<string, unknown>) {
     sid: SID,
     ev,
     page: FUNNEL_PAGE,
-    store: STORE_SLUG,
+    store: 'derman',
     utm_source: u.utm_source,
     utm_campaign: u.utm_campaign,
     utm_content: u.utm_content,
@@ -83,9 +81,7 @@ export function track(ev: FunnelEvent, extra?: Record<string, unknown>) {
   } catch {
     /* cae al fetch */
   }
-  fetch(FUNNEL_ENDPOINT, { method: 'POST', body, keepalive: true, headers: { 'Content-Type': 'text/plain' } }).catch(
-    () => {},
-  );
+  fetch(FUNNEL_ENDPOINT, { method: 'POST', body, keepalive: true }).catch(() => {});
 }
 
 export function initPixel() {
@@ -113,7 +109,11 @@ export function initPixel() {
 }
 
 export function pixel(event: string, params?: Record<string, unknown>, eventId?: string) {
-  if (!META_PIXEL_ID || !window.fbq) return;
-  if (eventId) window.fbq('track', event, params ?? {}, { eventID: eventId });
-  else window.fbq('track', event, params ?? {});
+  try {
+    if (!window.fbq) return;
+    if (eventId) window.fbq('track', event, params ?? {}, { eventID: eventId });
+    else window.fbq('track', event, params ?? {});
+  } catch {
+    /* nunca bloquear */
+  }
 }
