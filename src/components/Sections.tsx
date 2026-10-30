@@ -1,143 +1,249 @@
-import { Check, Droplets, Flame, Lock, Minus, RefreshCw, Stethoscope, Wind, X } from 'lucide-react';
-import { LOREM, useT } from '../lib/textos';
+import { useT } from '../lib/textos';
 
 export function GifSlot({ src, label, badge }: { src: string; label: string; badge: string }) {
   return (
-    <section className="mx-auto w-full max-w-3xl px-4 py-6">
-      <figure className="relative overflow-hidden rounded-3xl border border-slate-200 bg-slate-50 shadow-sm">
-        <span className="absolute left-4 top-4 z-10 rounded-full bg-white/90 px-3 py-1 text-xs font-bold text-brand-700 shadow ring-1 ring-brand-100 backdrop-blur">
+    <section className="mx-auto max-w-4xl px-4 py-6">
+      <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-xl">
+        <div className="absolute left-4 top-4 z-10 rounded-full bg-emerald-500/90 px-3 py-1 text-xs font-bold tracking-wide text-white uppercase backdrop-blur-sm">
           {badge}
-        </span>
-        <img src={src} alt={label} className="aspect-[13/7] w-full object-cover" loading="lazy" />
-        <figcaption className="px-4 py-3 text-center text-sm font-medium text-slate-600">{label}</figcaption>
-      </figure>
-    </section>
-  );
-}
-
-const CARD_ICONS = [Droplets, Flame, RefreshCw, Wind];
-
-export function Awareness() {
-  const t = useT();
-  const aviso = t('aviso.texto');
-  return (
-    <section className="bg-slate-50">
-      <div className="section">
-        <h2 className="section-title">{t('conciencia.titulo', LOREM.t)}</h2>
-        <p className="section-lead">{t('conciencia.lead', LOREM.p)}</p>
-        <div className="mt-8 grid gap-4 sm:grid-cols-2">
-          {CARD_ICONS.map((Icon, i) => (
-            <article key={i} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-50 text-red-600">
-                <Icon className="h-6 w-6" aria-hidden />
-              </div>
-              <h3 className="mt-3 text-lg font-bold">{t(`tarjeta${i + 1}.titulo`, LOREM.t)}</h3>
-              <p className="mt-1 text-sm leading-relaxed text-slate-600">{t(`tarjeta${i + 1}.texto`, LOREM.p)}</p>
-            </article>
-          ))}
         </div>
-        {aviso && (
-          <div className="mx-auto mt-6 flex max-w-3xl items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-            <Stethoscope className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
-            <p>{aviso}</p>
-          </div>
-        )}
+        <div className="flex min-h-[260px] items-center justify-center bg-slate-950/60 p-4">
+          <img src={src} alt={label} className="max-h-[360px] w-auto object-contain rounded-lg" />
+        </div>
+        <div className="border-t border-slate-800 bg-slate-900/90 p-4 text-center text-sm font-medium text-slate-300">
+          {label}
+        </div>
       </div>
     </section>
   );
 }
 
-const INGREDIENTS = ['Ácido Undecilénico', 'Ácido Salicílico', 'Lanolina pura', 'L-Arginina'];
+export function Awareness() {
+  const t = useT();
+
+  const cards = [
+    {
+      titulo: t('awareness.card1.titulo', 'Tiña Inguinal y Candidiasis'),
+      desc: t(
+        'awareness.card1.desc',
+        'El hongo se alimenta de queratina y se multiplica en los pliegues húmedos, generando una comezón descontrolada que empeora con agua caliente o jabones perfumados.'
+      ),
+      icon: '🦠',
+      tag: 'FASE 1: COLONIZACIÓN',
+    },
+    {
+      titulo: t('awareness.card2.titulo', 'Balanitis y Puntos Rojos'),
+      desc: t(
+        'awareness.card2.desc',
+        'Ardor punzante, resequedad con micro-grietas en glande o prepucio, e hipersensibilidad dolorosa al roce de la tela o al tener intimidad.'
+      ),
+      icon: '🔥',
+      tag: 'FASE 2: INFLAMACIÓN AGUDA',
+    },
+    {
+      titulo: t('awareness.card3.titulo', 'El Círculo Vicioso del Rascado'),
+      desc: t(
+        'awareness.card3.desc',
+        'Rascarte de forma inconsciente rompe la primera capa de piel, dispersando las esporas fúngicas hacia la entrepierna y abriendo paso a infecciones bacterianas.'
+      ),
+      icon: '⚠️',
+      tag: 'FASE 3: DISEMINACIÓN',
+    },
+    {
+      titulo: t('awareness.card4.titulo', 'Fermentación y Mal Olor Agrio'),
+      desc: t(
+        'awareness.card4.desc',
+        'La flora alterada descompone el sudor acumulado en horas de calor o deporte, generando un olor penetrante que los talcos comunes solo empeoran al crear grumos.'
+      ),
+      icon: '🛑',
+      tag: 'FASE 4: DESCOMPOSICIÓN',
+    },
+  ];
+
+  return (
+    <section className="bg-slate-900 py-12 text-white md:py-16">
+      <div className="mx-auto max-w-5xl px-4">
+        <div className="text-center">
+          <span className="inline-block rounded-full bg-red-500/20 px-3 py-1 text-xs font-extrabold tracking-wider text-red-400 uppercase">
+            Nivel de Conciencia Médica
+          </span>
+          <h2 className="mt-3 text-2xl font-black tracking-tight text-white md:text-4xl">
+            {t('awareness.titulo', 'No es sudor normal: Por qué la picazón y el ardor no ceden')}
+          </h2>
+          <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-slate-300 md:text-base">
+            {t(
+              'awareness.intro',
+              'La zona íntima masculina combina tres aceleradores críticos: calor continuo, tela sintética apretada y humedad retenida. Este microambiente es el caldo de cultivo donde los dermatofitos destruyen tu barrera cutánea.'
+            )}
+          </p>
+        </div>
+
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 md:gap-6">
+          {cards.map((c, i) => (
+            <div key={i} className="flex flex-col justify-between rounded-xl border border-slate-800 bg-slate-950/80 p-6 shadow-lg">
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-3xl">{c.icon}</span>
+                  <span className="rounded bg-slate-800 px-2 py-0.5 text-[10px] font-bold text-slate-400">{c.tag}</span>
+                </div>
+                <h3 className="mt-4 text-lg font-bold text-white">{c.titulo}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-400">{c.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export function Ingredients() {
   const t = useT();
+
+  const items = [
+    {
+      titulo: t('ingredients.item1.titulo', 'Ácido Undecilénico Activo'),
+      desc: t(
+        'ingredients.item1.desc',
+        'Inhibe la reproducción de Candida y destruye la biopelícula fúngica que las cremas comunes no logran disolver.'
+      ),
+      badge: 'Acción Antifúngica de Choque',
+    },
+    {
+      titulo: t('ingredients.item2.titulo', 'Ácido Salicílico Micro-Dosificado'),
+      desc: t(
+        'ingredients.item2.desc',
+        'Exfolia químicamente el estrato córneo infectado, desprendiendo células descamadas y destapando los poros.'
+      ),
+      badge: 'Exfoliación y Penetración',
+    },
+    {
+      titulo: t('ingredients.item3.titulo', 'Lanolina Pura Grado Emoliente'),
+      desc: t(
+        'ingredients.item3.desc',
+        'Crea una película protectora invisible y transpirable que corta el dolor por roce de los muslos al caminar.'
+      ),
+      badge: 'Escudo Anti-Fricción',
+    },
+    {
+      titulo: t('ingredients.item4.titulo', 'L-Arginina Regenerativa'),
+      desc: t(
+        'ingredients.item4.desc',
+        'Reactiva la microcirculación cutánea, cerrando micro-fisuras y devolviendo la elasticidad natural a la piel.'
+      ),
+      badge: 'Cicatrización Rápida',
+    },
+  ];
+
   return (
-    <section className="section">
-      <h2 className="section-title">{t('ingredientes.titulo', LOREM.t)}</h2>
-      <p className="section-lead">{t('ingredientes.mecanismo', LOREM.p)}</p>
-      <div className="mt-8 grid gap-4 sm:grid-cols-2">
-        {INGREDIENTS.map((name, i) => (
-          <article key={name} className="flex gap-4 rounded-2xl border border-brand-100 bg-brand-50/60 p-5">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-600 text-sm font-extrabold text-white">
-              {i + 1}
+    <section className="bg-slate-950 py-12 text-white md:py-16">
+      <div className="mx-auto max-w-5xl px-4">
+        <div className="text-center">
+          <span className="inline-block rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-extrabold tracking-wider text-emerald-400 uppercase">
+            Sinergia Bioactiva
+          </span>
+          <h2 className="mt-3 text-2xl font-black text-white md:text-3xl">
+            {t('ingredients.titulo', 'La fórmula de choque contra la micosis íntima')}
+          </h2>
+          <p className="mx-auto mt-3 max-w-2xl text-sm text-slate-400">
+            {t(
+              'ingredients.subtitulo',
+              'A diferencia de las cremas cosméticas espesas que asfixian la piel y alimentan al hongo, Derman combina activos clínicos de acción dirigida.'
+            )}
+          </p>
+        </div>
+
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 md:gap-6">
+          {items.map((it, i) => (
+            <div key={i} className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-6">
+              <span className="text-[11px] font-bold text-emerald-400 uppercase">{it.badge}</span>
+              <h3 className="mt-2 text-base font-bold text-white">{it.titulo}</h3>
+              <p className="mt-2 text-sm text-slate-400 leading-relaxed">{it.desc}</p>
             </div>
-            <div>
-              <h3 className="font-bold text-ink">{name}</h3>
-              <p className="mt-1 text-sm leading-relaxed text-slate-600">{t(`ing${i + 1}.texto`, LOREM.p)}</p>
-            </div>
-          </article>
-        ))}
+          ))}
+        </div>
       </div>
     </section>
   );
 }
 
 export function Privacy() {
+  const t = useT();
   return (
-    <section className="mx-auto w-full max-w-3xl px-4 py-8">
-      <div className="flex flex-col items-center gap-4 rounded-3xl border-2 border-brand-200 bg-white p-6 text-center shadow-sm sm:flex-row sm:text-left">
-        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-brand-600 text-white">
-          <Lock className="h-8 w-8" aria-hidden />
-        </div>
-        <div>
-          <h2 className="text-xl font-extrabold">Cero vergüenza al recibir tu paquete</h2>
-          <p className="mt-1 text-sm leading-relaxed text-slate-600">
-            Tu pedido llega en bolsa sellada y neutra, sin logos ni descripciones comprometedoras en la guía de envío.
-            Nadie sabe qué hay adentro: ni el portero, ni tu familia, ni el repartidor.
+    <section className="mx-auto max-w-4xl px-4 py-8">
+      <div className="rounded-2xl border-2 border-emerald-500/40 bg-slate-900 p-6 text-white shadow-2xl md:p-8">
+        <div className="flex flex-col items-center text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/20 text-3xl text-emerald-400">
+            🔒
+          </div>
+          <h3 className="mt-4 text-xl font-black text-white md:text-2xl">
+            {t('privacy.titulo', 'PRIVACIDAD BLINDADA: CERO VERGÜENZA AL RECIBIR')}
+          </h3>
+          <p className="mt-2 max-w-xl text-sm text-slate-300">
+            {t('privacy.p1', 'Tu privacidad es innegociable. Tu tratamiento se despacha en un empaque 100% neutro, opaco y sellado al vacío.')}
           </p>
+        </div>
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-lg bg-slate-950/70 p-4 text-center border border-slate-800">
+            <p className="text-xs font-bold text-emerald-400">RÓTULO ANÓNIMO</p>
+            <p className="mt-1 text-xs text-slate-400">
+              {t('privacy.p2', 'En la guía NO aparece la palabra "hongos", "zona íntima" ni nada similar. Solo tus datos y el valor a cobrar.')}
+            </p>
+          </div>
+          <div className="rounded-lg bg-slate-950/70 p-4 text-center border border-slate-800">
+            <p className="text-xs font-bold text-emerald-400">REPARTIDOR A CIEGAS</p>
+            <p className="mt-1 text-xs text-slate-400">
+              El mensajero solo entrega una caja logística estándar. Nadie sabe qué hay dentro.
+            </p>
+          </div>
+          <div className="rounded-lg bg-slate-950/70 p-4 text-center border border-slate-800">
+            <p className="text-xs font-bold text-emerald-400">PAGO SEGURO</p>
+            <p className="mt-1 text-xs text-slate-400">
+              {t('privacy.p3', 'Pagas en efectivo al recibir en tu puerta. Sin registros de tarjeta en extractos bancarios.')}
+            </p>
+          </div>
         </div>
       </div>
     </section>
   );
 }
 
-type Cell = 'yes' | 'no' | 'partial';
-const ROWS: { label: string; derman: Cell; ungüento: Cell; talco: Cell }[] = [
-  { label: 'Formulada para la piel íntima externa', derman: 'yes', ungüento: 'partial', talco: 'no' },
-  { label: 'Calma ardor y puntos rojos por roce o afeitado', derman: 'yes', ungüento: 'partial', talco: 'no' },
-  { label: 'Ayuda con granitos y vellos encarnados', derman: 'yes', ungüento: 'no', talco: 'no' },
-  { label: 'Hidrata sin resecar', derman: 'yes', ungüento: 'partial', talco: 'no' },
-  { label: 'No deja sensación grasosa ni manchas', derman: 'yes', ungüento: 'no', talco: 'partial' },
-  { label: 'Para hombres y mujeres', derman: 'yes', ungüento: 'partial', talco: 'yes' },
-  { label: 'Envío discreto y pago contra entrega', derman: 'yes', ungüento: 'no', talco: 'no' },
-];
-
-function Mark({ v }: { v: Cell }) {
-  if (v === 'yes') return <Check className="mx-auto h-5 w-5 text-brand-600" aria-label="Sí" />;
-  if (v === 'partial') return <Minus className="mx-auto h-5 w-5 text-amber-500" aria-label="A veces" />;
-  return <X className="mx-auto h-5 w-5 text-red-500" aria-label="No" />;
-}
-
 export function Comparison() {
   return (
-    <section className="bg-slate-50">
-      <div className="section">
-        <h2 className="section-title">¿Por qué Derman y no lo de siempre?</h2>
-        <div className="mt-8 overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <table className="w-full min-w-[560px] text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
-                <th className="px-4 py-3 text-left font-semibold"> </th>
-                <th className="bg-brand-600 px-3 py-3 text-center font-bold text-white">Derman™</th>
-                <th className="px-3 py-3 text-center font-semibold">Ungüentos genéricos de farmacia</th>
-                <th className="px-3 py-3 text-center font-semibold">Talcos / jabones comerciales</th>
+    <section className="bg-slate-950 py-12 text-white">
+      <div className="mx-auto max-w-4xl px-4">
+        <h2 className="text-center text-2xl font-black md:text-3xl">¿Por qué Derman vs. Soluciones Tradicionales?</h2>
+        <div className="mt-8 overflow-hidden rounded-xl border border-slate-800 bg-slate-900 shadow-xl">
+          <table className="w-full text-left text-xs md:text-sm">
+            <thead className="bg-slate-800/80 text-slate-200 uppercase">
+              <tr>
+                <th className="p-3 md:p-4">Criterio</th>
+                <th className="p-3 font-bold text-emerald-400 md:p-4">Derman™ Activo</th>
+                <th className="p-3 text-slate-400 md:p-4">Cremas Genéricas / Talcos</th>
               </tr>
             </thead>
-            <tbody>
-              {ROWS.map((r) => (
-                <tr key={r.label} className="border-b border-slate-100 last:border-0">
-                  <td className="px-4 py-3 font-medium text-slate-700">{r.label}</td>
-                  <td className="bg-brand-50 px-3 py-3">
-                    <Mark v={r.derman} />
-                  </td>
-                  <td className="px-3 py-3">
-                    <Mark v={r.ungüento} />
-                  </td>
-                  <td className="px-3 py-3">
-                    <Mark v={r.talco} />
-                  </td>
-                </tr>
-              ))}
+            <tbody className="divide-y divide-slate-800 text-slate-300">
+              <tr>
+                <td className="p-3 font-medium md:p-4">Acción en pliegues íntimos</td>
+                <td className="p-3 font-bold text-emerald-400 md:p-4">Fórmula balanceada para pH genital</td>
+                <td className="p-3 text-red-400 md:p-4">Grasosas o con perfumes irritantes</td>
+              </tr>
+              <tr>
+                <td className="p-3 font-medium md:p-4">Absorción</td>
+                <td className="p-3 font-bold text-emerald-400 md:p-4">Secado instantáneo sin manchar ropa</td>
+                <td className="p-3 text-red-400 md:p-4">Deja película blanca pegajosa o grumos</td>
+              </tr>
+              <tr>
+                <td className="p-3 font-medium md:p-4">Ataque a la causa</td>
+                <td className="p-3 font-bold text-emerald-400 md:p-4">Ácido Undecilénico disuelve el biofilm</td>
+                <td className="p-3 text-red-400 md:p-4">Solo alivio temporal momentáneo</td>
+              </tr>
+              <tr>
+                <td className="p-3 font-medium md:p-4">Privacidad en compra</td>
+                <td className="p-3 font-bold text-emerald-400 md:p-4">Entrega 100% anónima a domicilio</td>
+                <td className="p-3 text-red-400 md:p-4">Exponer el problema en el mostrador</td>
+              </tr>
             </tbody>
           </table>
         </div>
