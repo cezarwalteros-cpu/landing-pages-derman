@@ -1,4 +1,65 @@
+import { useEffect, useRef, useState } from 'react';
 import { useT } from '../lib/textos';
+
+const isVideo = (src: string) => /\.(mp4|webm|mov)(\?|$)/i.test(src) || src.includes('/video/upload/');
+
+// Si el video está en Cloudinary, se pide comprimido (calidad automática, 720 px, códec compatible)
+// y se genera una portada con el primer cuadro, para que la página no quede pesada.
+function cloudinaryVideo(src: string) {
+  if (!src.includes('res.cloudinary.com') || !src.includes('/video/upload/')) return { video: src, poster: undefined };
+  const [base, rest] = src.split('/video/upload/');
+  const path = rest.replace(/^([a-z]{1,3}_[^/]+\/)+/i, ''); // quita transformaciones previas
+  return {
+    video: `${base}/video/upload/q_auto:eco,w_720,vc_auto/${path.replace(/\.(mov|webm)$/i, '.mp4')}`,
+    poster: `${base}/video/upload/so_0,w_720,q_auto/${path.replace(/\.(mp4|mov|webm)$/i, '.jpg')}`,
+  };
+}
+
+// Video en bucle, sin sonido; solo se descarga cuando el cliente se acerca a la sección.
+function LoopVideo({ src, label }: { src: string; label: string }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  const [visible, setVisible] = useState(false);
+  const { video, poster } = cloudinaryVideo(src);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (!('IntersectionObserver' in window)) {
+      setVisible(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setVisible(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: '300px' },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (visible) ref.current?.play().catch(() => {});
+  }, [visible]);
+
+  return (
+    <video
+      ref={ref}
+      src={visible ? video : undefined}
+      poster={poster}
+      autoPlay
+      muted
+      loop
+      playsInline
+      preload="none"
+      aria-label={label}
+      className="max-h-[420px] w-auto max-w-full rounded-lg object-contain"
+    />
+  );
+}
 
 export function GifSlot({ src, label, badge }: { src: string; label: string; badge: string }) {
   return (
@@ -8,7 +69,11 @@ export function GifSlot({ src, label, badge }: { src: string; label: string; bad
           {badge}
         </div>
         <div className="flex min-h-[260px] items-center justify-center bg-slate-950/60 p-4">
-          <img src={src} alt={label} className="max-h-[360px] w-auto object-contain rounded-lg" />
+          {isVideo(src) ? (
+            <LoopVideo src={src} label={label} />
+          ) : (
+            <img src={src} alt={label} className="max-h-[360px] w-auto object-contain rounded-lg" />
+          )}
         </div>
         <div className="border-t border-slate-800 bg-slate-900/90 p-4 text-center text-sm font-medium text-slate-300">
           {label}
