@@ -1,8 +1,16 @@
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { LOREM, useT } from '../lib/textos';
+import { useT } from '../lib/textos';
 
 const FAQS_FIJAS = [
+  {
+    q: '¿Sirve si ya tengo puntos rojos, ardor o descamación?',
+    a: 'Sí. La fórmula está diseñada para actuar directamente sobre la proliferación de hongos (Candida) y la inflamación por fricción. Calma la quemazón y el picor desde las primeras aplicaciones y ayuda a restaurar la piel en pocos días.',
+  },
+  {
+    q: '¿Mi pareja debería usarlo también?',
+    a: 'Es lo más recomendable. Los hongos y desequilibrios en la zona íntima se transmiten con facilidad por contacto y sudor. Usarlo ambos al mismo tiempo previene el molesto efecto de contagio cruzado y recaídas continuas.',
+  },
   {
     q: '¿Cómo se aplica?',
     a: 'Lava y seca bien la zona. Aplica una capa delgada en la piel externa con irritación o roce, 1 o 2 veces al día. Después de afeitarte, aplícala sobre la piel seca para calmar el ardor.',
@@ -24,11 +32,19 @@ const FAQS_FIJAS = [
 export function Faq() {
   const t = useT();
   const [open, setOpen] = useState<number | null>(0);
+
   const FAQS = [
-    { q: t('faq1.pregunta', LOREM.t + '?'), a: t('faq1.respuesta', LOREM.p) },
-    { q: t('faq2.pregunta', LOREM.t + '?'), a: t('faq2.respuesta', LOREM.p) },
-    ...FAQS_FIJAS,
+    {
+      q: t('faq1.pregunta', FAQS_FIJAS[0].q),
+      a: t('faq1.respuesta', FAQS_FIJAS[0].a),
+    },
+    {
+      q: t('faq2.pregunta', FAQS_FIJAS[1].q),
+      a: t('faq2.respuesta', FAQS_FIJAS[1].a),
+    },
+    ...FAQS_FIJAS.slice(2),
   ].filter((f) => f.q && f.a);
+
   return (
     <section className="section">
       <h2 className="section-title">Preguntas frecuentes</h2>
