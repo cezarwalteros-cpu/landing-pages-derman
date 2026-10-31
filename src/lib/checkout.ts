@@ -15,7 +15,9 @@ export type Shipping = {
   priority: { title: string; description: string | null; price: number } | null;
 };
 
-export type ServerConfig = { bundles: Bundle[]; defaultId: string | null; shipping: Shipping };
+export type Bump = { title: string; description: string | null; image_url: string | null; price: number; compare_at_price: number | null };
+
+export type ServerConfig = { bundles: Bundle[]; defaultId: string | null; shipping: Shipping; bump: Bump | null };
 
 export type ApiResult = {
   status: number;
@@ -67,6 +69,7 @@ export async function loadConfig(): Promise<ServerConfig | null> {
         standard: c.standard_shipping ?? { title: 'Estándar', description: 'Llega en 3 a 4 días hábiles' },
         priority: c.priority_shipping ?? null,
       },
+      bump: c.order_bump && c.order_bump.price ? c.order_bump : null,
     };
   } catch {
     return null;

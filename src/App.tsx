@@ -7,7 +7,7 @@ import { Awareness, Comparison, GifSlot, Ingredients, Privacy } from './componen
 import { OrderForm } from './components/OrderForm';
 import { Faq } from './components/Faq';
 import { initPixel, pixel, track } from './lib/tracking';
-import { loadConfig, type Shipping } from './lib/checkout';
+import { loadConfig, type Bump, type Shipping } from './lib/checkout';
 import { LOREM, useT } from './lib/textos';
 
 export default function App() {
@@ -18,6 +18,7 @@ export default function App() {
     standard: { title: 'Estándar', description: 'Llega en 3 a 4 días hábiles' },
     priority: { title: 'Express', description: 'Despacho con prioridad y envío asegurado', price: 5000 },
   });
+  const [bump, setBump] = useState<Bump | null>(null);
   const scrolled = useRef({ s50: false, s90: false });
 
   useEffect(() => {
@@ -28,6 +29,7 @@ export default function App() {
       if (!c) return;
       setBundles(c.bundles);
       setShipping(c.shipping);
+      setBump(c.bump);
       setSelected((cur) => (c.bundles.some((b) => b.id === cur) ? cur : c.defaultId ?? c.bundles[0].id));
     });
     const onScroll = () => {
@@ -76,7 +78,7 @@ export default function App() {
 
         <Privacy />
         <Comparison />
-        <OrderForm bundles={bundles} selected={selected} onSelect={select} shipping={shipping} />
+        <OrderForm bundles={bundles} selected={selected} onSelect={select} shipping={shipping} bump={bump} />
         <Faq />
       </main>
 

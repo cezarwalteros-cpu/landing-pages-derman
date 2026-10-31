@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Loader2, Lock, MapPin, Truck } from 'lucide-react';
 import { UNIT_PRICE, type Bundle } from '../config';
-import { api, buscarCiudad, clean, DRY_RUN, eta, phone10, type Ciudad, type Shipping } from '../lib/checkout';
+import { api, buscarCiudad, clean, DRY_RUN, eta, phone10, type Bump, type Ciudad, type Shipping } from '../lib/checkout';
 import { copShort } from '../lib/format';
 import { pixel, trackingPayload } from '../lib/tracking';
 
@@ -10,7 +10,11 @@ type Props = {
   selected: string;
   onSelect: (id: string) => void;
   shipping: Shipping;
+  bump: Bump | null;
 };
+
+// El order bump (segundo frasco con descuento) solo se ofrece a quien escoge 1 frasco.
+const BUMP_OFFER = 'x1';
 
 type Field = 'first_name' | 'last_name' | 'phone' | 'city' | 'address1' | 'additional' | 'shipping_option' | 'payment_method';
 type Errors = Partial<Record<Field, string>>;
@@ -18,7 +22,7 @@ type Errors = Partial<Record<Field, string>>;
 const fmtPhone = (v: string) =>
   phone10(v).slice(0, 10).replace(/^(\d{3})(\d{0,3})(\d{0,4}).*/, (_m, a, b, c) => [a, b, c].filter(Boolean).join(' '));
 
-export function OrderForm({ bundles, selected, onSelect, shipping }: Props) {
+export function OrderForm({ bundles, selected, onSelect, shipping, bump }: Props) {
   const bundle = bundles.find((b) => b.id === selected) ?? bundles[0];
 
   const [firstName, setFirstName] = useState('');
@@ -32,6 +36,7 @@ export function OrderForm({ bundles, selected, onSelect, shipping }: Props) {
   const [formError, setFormError] = useState('');
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState<{ number: string; total: number } | null>(null);
+  const [bumpOn, setBumpOn] = useState(false);
 
   // Ciudad con buscador (municipios DANE del checkout)
   const [cityQ, setCityQ] = useState('');
@@ -48,15 +53,24 @@ export function OrderForm({ bundles, selected, onSelect, shipping }: Props) {
   const cartKey = useRef('');
   const cartTimer = useRef<number | undefined>(undefined);
 
+  const showBump = !!bump && bundle.id === BUMP_OFFER;
+  const bumpActive = showBump && bumpOn;
+  const bumpPrice = bumpActive && bump ? bump.price : 0;
   const priority = shipOpt === 'priority' && shipping.priority ? shipping.priority : null;
   const shipCost = priority ? priority.price : 0;
-  const total = bundle.price + shipCost;
+  const total = bundle.price + bumpPrice + shipCost;
+  const units = bundle.units + (bumpActive ? 1 : 0);
   const regular = bundle.units * UNIT_PRICE;
   const save = Math.max((bundle.compare || regular) - bundle.price, 0);
 
   useEffect(() => {
     if (!shipping.priority && shipOpt === 'priority') setShipOpt('standard');
   }, [shipping.priority, shipOpt]);
+
+  // Si cambian a un pack de 3 o 5, el bump se apaga
+  useEffect(() => {
+    if (bundle.id !== BUMP_OFFER) setBumpOn(false);
+  }, [bundle.id]);
 
   const setErr = (f: Field, msg?: string) => setErrors((e) => ({ ...e, [f]: msg }));
 
@@ -78,10 +92,10 @@ export function OrderForm({ bundles, selected, onSelect, shipping }: Props) {
     const p = phone10(phone);
     if (DRY_RUN || done || !/^3\d{9}$/.test(p)) return;
     const name = clean(`${firstName} ${lastName}`);
-    const key = [p, name, bundle.id].join('|');
+    const key = [p, name, bundle.id, bumpActive].join('|');
     if (key === cartKey.current) return;
     cartKey.current = key;
-    api({ action: 'cart', phone: p, name, offer_key: bundle.id, bump: false, tracking: trackingPayload() }).catch(() => {});
+    api({ action: 'cart', phone: p, name, offer_key: bundle.id, bump: bumpActive, tracking: trackingPayload() }).catch(() => {});
   }
   const queueCart = () => {
     window.clearTimeout(cartTimer.current);
@@ -89,7 +103,7 @@ export function OrderForm({ bundles, selected, onSelect, shipping }: Props) {
   };
   useEffect(() => {
     queueCart();
-  }, [bundle.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [bundle.id, bumpActive]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     const h = () => sendCart();
     window.addEventListener('pagehide', h);
@@ -195,7 +209,7 @@ export function OrderForm({ bundles, selected, onSelect, shipping }: Props) {
       const j = await api({
         action: 'order',
         offer_key: bundle.id,
-        bump: false,
+        bump: bumpActive,
         upsell: false,
         customer: { first_name: clean(firstName), last_name: clean(lastName), phone: phone10(phone) },
         address: { department: city!.departamento, city: city!.municipio, address1: clean(address1), additional: clean(additional) },
@@ -219,7 +233,7 @@ export function OrderForm({ bundles, selected, onSelect, shipping }: Props) {
       window.clearTimeout(cartTimer.current);
       const t = j.total_cop || total;
       if (j.event_id && j.event_id !== 'dry_run') {
-        pixel('Purchase', { value: t, currency: 'COP', num_items: bundle.units, content_name: 'DERMAN ' + bundle.title }, j.event_id);
+        pixel('Purchase', { value: t, currency: 'COP', num_items: units, content_name: 'DERMAN ' + bundle.title + (bumpActive ? ' + 2do frasco' : '') }, j.event_id);
       }
       setDone({ number: j.order_number || '', total: t });
       window.setTimeout(() => document.getElementById('pedido')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
@@ -302,6 +316,30 @@ export function OrderForm({ bundles, selected, onSelect, shipping }: Props) {
               })}
             </div>
           </div>
+
+          {showBump && bump && (
+            <label
+              className={`flex cursor-pointer gap-3 rounded-2xl border-2 border-dashed p-3 transition ${
+                bumpOn ? 'border-amber-500 bg-amber-50' : 'border-amber-400 bg-amber-50/60 hover:bg-amber-50'
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={bumpOn}
+                onChange={(e) => setBumpOn(e.target.checked)}
+                className="mt-1 h-5 w-5 shrink-0 accent-amber-600"
+              />
+              {bump.image_url && <img src={bump.image_url} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" />}
+              <span className="flex-1 text-sm">
+                <b className="block text-ink">{bump.title}</b>
+                {bump.description && <span className="mt-0.5 block text-xs text-slate-600">{bump.description}</span>}
+                <span className="mt-1 block">
+                  {bump.compare_at_price ? <s className="mr-1 text-xs text-slate-400">{copShort(bump.compare_at_price)}</s> : null}
+                  <b className="text-amber-700">+{copShort(bump.price)}</b>
+                </span>
+              </span>
+            </label>
+          )}
 
           <div className="text-sm font-bold text-ink">2. ¿A dónde te lo enviamos?</div>
 
@@ -404,6 +442,12 @@ export function OrderForm({ bundles, selected, onSelect, shipping }: Props) {
                 {copShort(bundle.price)}
               </span>
             </div>
+            {bumpActive && bump && (
+              <div className="mt-1 flex justify-between">
+                <span>2do frasco (50% dto.)</span>
+                <span>{copShort(bump.price)}</span>
+              </div>
+            )}
             <div className="mt-1 flex justify-between">
               <span>Envío {priority ? priority.title : ''}</span>
               <span className={shipCost ? '' : 'font-semibold text-brand-700'}>{shipCost ? copShort(shipCost) : 'Gratis'}</span>
