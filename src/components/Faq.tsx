@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { useT } from '../lib/textos';
 
 const FAQS_FIJAS = [
   {
@@ -30,26 +29,13 @@ const FAQS_FIJAS = [
 ];
 
 export function Faq() {
-  const t = useT();
   const [open, setOpen] = useState<number | null>(0);
-
-  const FAQS = [
-    {
-      q: t('faq1.pregunta', FAQS_FIJAS[0].q),
-      a: t('faq1.respuesta', FAQS_FIJAS[0].a),
-    },
-    {
-      q: t('faq2.pregunta', FAQS_FIJAS[1].q),
-      a: t('faq2.respuesta', FAQS_FIJAS[1].a),
-    },
-    ...FAQS_FIJAS.slice(2),
-  ].filter((f) => f.q && f.a);
 
   return (
     <section className="section">
       <h2 className="section-title">Preguntas frecuentes</h2>
       <div className="mx-auto mt-8 max-w-3xl divide-y divide-slate-200 rounded-2xl border border-slate-200 bg-white">
-        {FAQS.map((f, i) => {
+        {FAQS_FIJAS.map((f, i) => {
           const isOpen = open === i;
           return (
             <div key={f.q}>
