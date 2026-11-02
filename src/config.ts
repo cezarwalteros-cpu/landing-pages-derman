@@ -39,18 +39,27 @@ export const UNIT_PRICE = 89900;
 export const BUNDLES: Bundle[] = [
   { id: 'x1', units: 1, price: 89900, compare: 0, title: '1 Frasco', subtitle: 'Dosis de emergencia' },
   {
+    id: 'x2',
+    units: 2,
+    price: 134850,
+    compare: 179800,
+    title: '2 Frascos',
+    subtitle: 'Tratamiento completo anti-rebrote',
+    badge: 'MÁS VENDIDO / RECOMENDADO',
+  },
+  {
     id: 'x3',
     units: 3,
     price: 179800,
     compare: 269700,
     title: 'Lleva 3 Frascos (Paga 2 Lleva 3)',
-    subtitle: 'Tratamiento completo anti-rebrote',
-    badge: 'MÁS VENDIDO / RECOMENDADO',
+    subtitle: 'Máximo ahorro',
+    badge: 'MEJOR PRECIO',
   },
-  { id: 'x5', units: 5, price: 269700, compare: 449500, title: 'Lleva 5 Frascos (Paga 3 Lleva 5)', subtitle: 'Máximo ahorro' },
 ];
 
-export const DEFAULT_BUNDLE = 'x3';
+// El preseleccionado real lo define is_default en checkout_pages; este es el respaldo.
+export const DEFAULT_BUNDLE = 'x2';
 
 // --- Imágenes: se cambian desde Supabase (landing_textos, claves img.*). Estos son los placeholders. ---
 const ph = (w: number, h: number, text: string) =>

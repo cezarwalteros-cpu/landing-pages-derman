@@ -14,6 +14,7 @@ export default function App() {
   const t = useT();
   const [bundles, setBundles] = useState(BUNDLES);
   const [selected, setSelected] = useState<string>(DEFAULT_BUNDLE);
+  const touched = useRef(false); // el cliente ya escogió un pack a mano
   const [shipping, setShipping] = useState<Shipping>({
     standard: { title: 'Estándar', description: 'Llega en 3 a 4 días hábiles' },
     priority: { title: 'Express', description: 'Despacho con prioridad y envío asegurado', price: 5000 },
@@ -30,7 +31,9 @@ export default function App() {
       setBundles(c.bundles);
       setShipping(c.shipping);
       setBump(c.bump);
-      setSelected((cur) => (c.bundles.some((b) => b.id === cur) ? cur : c.defaultId ?? c.bundles[0].id));
+      setSelected((cur) =>
+        touched.current && c.bundles.some((b) => b.id === cur) ? cur : c.defaultId ?? c.bundles[0].id,
+      );
     });
     const onScroll = () => {
       const h = document.documentElement;
@@ -49,6 +52,7 @@ export default function App() {
   }, []);
 
   const select = (id: string) => {
+    touched.current = true;
     setSelected(id);
     track('plan_select', { plan: id });
   };
