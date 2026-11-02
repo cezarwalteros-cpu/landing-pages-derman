@@ -58,7 +58,8 @@ export function trackingPayload() {
   };
 }
 
-type FunnelEvent = 'page_view' | 'plan_select' | 'cta_click' | 'scroll_50' | 'scroll_90';
+// Mismos eventos que mide la pestaña Embudo del CRM (igual que pedido.enerplu.com)
+type FunnelEvent = 'page_view' | 'selector_view' | 'plan_select' | 'plan_click' | 'cta_click' | 'scroll_50' | 'scroll_90';
 
 export function track(ev: FunnelEvent, extra?: Record<string, unknown>) {
   const u = getUtms();

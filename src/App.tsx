@@ -7,7 +7,7 @@ import { Awareness, Comparison, GifSlot, Ingredients, Privacy } from './componen
 import { OrderForm } from './components/OrderForm';
 import { Faq } from './components/Faq';
 import { initPixel, pixel, track } from './lib/tracking';
-import { loadConfig, type Bump, type Shipping } from './lib/checkout';
+import { loadConfig, marcarCheckout, type Bump, type Shipping } from './lib/checkout';
 import { LOREM, useT } from './lib/textos';
 
 export default function App() {
@@ -48,7 +48,46 @@ export default function App() {
       }
     };
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+
+    // Embudo: "vio los planes" (packs visibles) y "abrió el checkout" (llegó cerca del formulario)
+    const observers: IntersectionObserver[] = [];
+    if ('IntersectionObserver' in window) {
+      const planes = document.querySelectorAll('[data-dm-planes]');
+      if (planes.length) {
+        const io = new IntersectionObserver(
+          (es) => {
+            if (es.some((e) => e.isIntersecting)) {
+              track('selector_view');
+              io.disconnect();
+            }
+          },
+          { threshold: 0.4 },
+        );
+        planes.forEach((el) => io.observe(el));
+        observers.push(io);
+      }
+      const pedido = document.getElementById('pedido');
+      if (pedido) {
+        const io = new IntersectionObserver(
+          (es) => {
+            if (es.some((e) => e.isIntersecting)) {
+              marcarCheckout();
+              io.disconnect();
+            }
+          },
+          { rootMargin: '900px 0px' },
+        );
+        io.observe(pedido);
+        observers.push(io);
+      }
+    } else {
+      track('selector_view');
+      marcarCheckout();
+    }
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      observers.forEach((o) => o.disconnect());
+    };
   }, []);
 
   const select = (id: string) => {
@@ -58,7 +97,8 @@ export default function App() {
   };
 
   const goToOrder = () => {
-    track('cta_click', { plan: selected });
+    track('plan_click', { plan: selected, from: 'buybox' });
+    marcarCheckout();
     document.getElementById('pedido')?.scrollIntoView({ behavior: 'smooth' });
   };
 

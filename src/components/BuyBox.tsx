@@ -37,7 +37,7 @@ export function BuyBox({ bundles, selected, onSelect, onOrder }: Props) {
         {t('hero.kicker', LOREM.p)}
       </p>
 
-      <fieldset className="mt-5 space-y-3">
+      <fieldset data-dm-planes className="mt-5 space-y-3">
         <legend className="mb-1 text-sm font-semibold text-slate-700">Elige tu pack:</legend>
         {bundles.map((b) => {
           const isSel = b.id === selected;

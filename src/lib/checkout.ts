@@ -43,9 +43,18 @@ export async function api(body: Record<string, unknown>): Promise<ApiResult> {
   return { status: r.status, ...j };
 }
 
+// Registra "abrió el checkout" (embudo del CRM) cuando el cliente llega cerca del formulario, igual que pedido.enerplu.com
+let checkoutMarcado = false;
+export function marcarCheckout() {
+  if (checkoutMarcado) return;
+  checkoutMarcado = true;
+  fetch(`${CHECKOUT_API}?slug=${CHECKOUT_SLUG}`).catch(() => {});
+}
+
 export async function loadConfig(): Promise<ServerConfig | null> {
   try {
-    const r = await fetch(`${CHECKOUT_API}?slug=${CHECKOUT_SLUG}`);
+    // vista=0: cargar precios al abrir la página no cuenta como "abrió el checkout" (eso lo marca marcarCheckout)
+    const r = await fetch(`${CHECKOUT_API}?slug=${CHECKOUT_SLUG}&vista=0`);
     const j = await r.json();
     if (!j.success || !j.config) return null;
     const c = j.config;
