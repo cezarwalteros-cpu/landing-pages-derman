@@ -3,7 +3,7 @@ import { AlertTriangle, CheckCircle2, Loader2, Lock, MapPin, Truck } from 'lucid
 import { UNIT_PRICE, type Bundle } from '../config';
 import { api, buscarCiudad, clean, DRY_RUN, eta, phone10, type Bump, type Ciudad, type Shipping } from '../lib/checkout';
 import { copShort } from '../lib/format';
-import { pixel, trackingPayload } from '../lib/tracking';
+import { pixel, track, trackingPayload } from '../lib/tracking';
 
 type Props = {
   bundles: Bundle[];
@@ -200,6 +200,8 @@ export function OrderForm({ bundles, selected, onSelect, shipping, bump }: Props
     });
     setErrors(errs);
     const first = Object.keys(errs)[0];
+    // Embudo: clic en "Pedir" del formulario (igual que pedido.enerplu.com); ok = sin campos con error
+    track('cta_click', { from: 'form', plan: bundle.id, ok: !first });
     if (first) {
       document.querySelector<HTMLElement>(`[data-f="${first}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
