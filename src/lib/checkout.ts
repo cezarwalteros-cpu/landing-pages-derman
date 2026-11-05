@@ -68,6 +68,7 @@ export async function loadConfig(): Promise<ServerConfig | null> {
         title: o.label || local?.title || o.key,
         subtitle: o.sublabel || local?.subtitle || '',
         badge: o.badge || undefined,
+        gift: o.gift && o.gift.title ? o.gift : null,
       };
     });
     const def = (c.offers ?? []).find((o: any) => o.is_default);

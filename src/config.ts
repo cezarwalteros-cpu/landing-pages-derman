@@ -32,6 +32,8 @@ export type Bundle = {
   title: string;
   subtitle: string;
   badge?: string;
+  // Obsequio que va en el mismo paquete (lo define offers[].gift en checkout_pages)
+  gift?: { title: string; description: string | null; image_url: string | null } | null;
 };
 
 export const UNIT_PRICE = 89900;
