@@ -307,6 +307,7 @@ export function OrderForm({ bundles, selected, onSelect, shipping, bump }: Props
                     <span className="flex-1">
                       <b className="block text-sm text-ink">{b.title}</b>
                       <span className="text-xs text-slate-500">{b.subtitle}</span>
+                      {b.gift && <span className="mt-0.5 block text-[11px] font-bold text-amber-700">🎁 + {b.gift.title} de regalo</span>}
                     </span>
                     <span className="text-right">
                       <b className="block text-ink">{copShort(b.price)}</b>
@@ -444,6 +445,12 @@ export function OrderForm({ bundles, selected, onSelect, shipping, bump }: Props
                 {copShort(bundle.price)}
               </span>
             </div>
+            {bundle.gift && (
+              <div className="mt-1 flex justify-between">
+                <span>🎁 {bundle.gift.title}</span>
+                <span className="font-semibold text-brand-700">Gratis</span>
+              </div>
+            )}
             {bumpActive && bump && (
               <div className="mt-1 flex justify-between">
                 <span>2do frasco (50% dto.)</span>

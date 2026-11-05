@@ -66,6 +66,11 @@ export function BuyBox({ bundles, selected, onSelect, onOrder }: Props) {
               <div className="flex-1">
                 <div className="font-bold text-ink">{b.title}</div>
                 <div className="text-xs text-slate-500">{b.subtitle}</div>
+                {b.gift && (
+                  <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-800">
+                    🎁 + {b.gift.title} de regalo
+                  </div>
+                )}
               </div>
               <div className="text-right">
                 <div className="text-lg font-extrabold text-ink">{copShort(b.price)}</div>
