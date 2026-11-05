@@ -406,8 +406,10 @@ export function OrderForm({ bundles, selected, onSelect, shipping, bump }: Props
               className={fieldCls('additional')} />
           </FieldWrap>
 
-          {/* honeypot antibots */}
-          <input name="website" type="text" tabIndex={-1} autoComplete="off" aria-hidden="true" value={website}
+          {/* honeypot antibots. Nombre raro a propósito: con name="website" el autocompletar del celular
+              lo llenaba y el pedido real se descartaba como bot (DER, nov 2026). */}
+          <input name="dm_hp_ref" id="dm_hp_ref" type="text" tabIndex={-1} autoComplete="new-password" aria-hidden="true"
+            data-lpignore="true" data-1p-ignore data-form-type="other" value={website}
             onChange={(e) => setWebsite(e.target.value)} className="absolute -left-[9999px] h-0 w-0 opacity-0" />
 
           <div>
