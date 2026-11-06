@@ -59,7 +59,7 @@ export function trackingPayload() {
 }
 
 // Mismos eventos que mide la pestaña Embudo del CRM (igual que pedido.enerplu.com)
-type FunnelEvent = 'page_view' | 'selector_view' | 'plan_select' | 'plan_click' | 'cta_click' | 'scroll_50' | 'scroll_90';
+type FunnelEvent = 'page_view' | 'selector_view' | 'plan_select' | 'plan_click' | 'cta_click' | 'scroll_50' | 'scroll_90' | 'ping' | 'salida';
 
 export function track(ev: FunnelEvent, extra?: Record<string, unknown>) {
   const u = getUtms();
@@ -83,6 +83,25 @@ export function track(ev: FunnelEvent, extra?: Record<string, unknown>) {
     /* cae al fetch */
   }
   fetch(FUNNEL_ENDPOINT, { method: 'POST', body, keepalive: true }).catch(() => {});
+}
+
+// "En línea ahora" del CRM: latido cada 30 s mientras la página está a la vista (máx. 30 min)
+// y aviso de salida al ocultarla. funnel-track guarda ping/salida solo en funnel_en_vivo, no en el embudo.
+export function startPresence() {
+  let latidos = 0;
+  const latido = () => {
+    if (document.visibilityState === 'visible' && latidos < 60) {
+      latidos++;
+      track('ping');
+    }
+  };
+  const id = window.setInterval(latido, 30000);
+  const onVis = () => (document.visibilityState === 'hidden' ? track('salida') : latido());
+  document.addEventListener('visibilitychange', onVis);
+  return () => {
+    window.clearInterval(id);
+    document.removeEventListener('visibilitychange', onVis);
+  };
 }
 
 export function initPixel() {

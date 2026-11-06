@@ -6,7 +6,7 @@ import { BuyBox } from './components/BuyBox';
 import { Awareness, Comparison, GifSlot, Ingredients, Privacy } from './components/Sections';
 import { OrderForm } from './components/OrderForm';
 import { Faq } from './components/Faq';
-import { initPixel, pixel, track } from './lib/tracking';
+import { initPixel, pixel, startPresence, track } from './lib/tracking';
 import { loadConfig, marcarCheckout, type Bump, type Shipping } from './lib/checkout';
 import { LOREM, useT } from './lib/textos';
 
@@ -25,6 +25,7 @@ export default function App() {
   useEffect(() => {
     initPixel();
     track('page_view');
+    const stopPresence = startPresence();
     pixel('ViewContent', { value: 179800, currency: 'COP', content_name: 'DERMAN' });
     loadConfig().then((c) => {
       if (!c) return;
@@ -87,6 +88,7 @@ export default function App() {
     return () => {
       window.removeEventListener('scroll', onScroll);
       observers.forEach((o) => o.disconnect());
+      stopPresence();
     };
   }, []);
 
