@@ -35,7 +35,7 @@ export function OrderForm({ bundles, selected, onSelect, shipping, bump }: Props
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState('');
   const [sending, setSending] = useState(false);
-  const [done, setDone] = useState<{ number: string; total: number } | null>(null);
+  const [done, setDone] = useState<{ number: string; total: number; express: boolean } | null>(null);
   const [bumpOn, setBumpOn] = useState(false);
 
   // Ciudad con buscador (municipios DANE del checkout)
@@ -237,7 +237,7 @@ export function OrderForm({ bundles, selected, onSelect, shipping, bump }: Props
       if (j.event_id && j.event_id !== 'dry_run') {
         pixel('Purchase', { value: t, currency: 'COP', num_items: units, content_name: 'DERMAN ' + bundle.title + (bumpActive ? ' + 2do frasco' : '') }, j.event_id);
       }
-      setDone({ number: j.order_number || '', total: t });
+      setDone({ number: j.order_number || '', total: t, express: Number(j.shipping_cop) > 0 || !!priority });
       window.setTimeout(() => document.getElementById('pedido')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
     } catch {
       setFormError('No pudimos registrar tu pedido. Revisa tu conexión e inténtalo de nuevo.');
@@ -262,6 +262,17 @@ export function OrderForm({ bundles, selected, onSelect, shipping, bump }: Props
           </p>
           {done.number && (
             <span className="mt-4 inline-block rounded-full bg-brand-50 px-4 py-1 text-sm font-bold text-brand-700">Pedido {done.number}</span>
+          )}
+          {/* fecha según el envío elegido (aprobado por cesar 2026-11-08): express 2-3 días hábiles, sale el mismo día si confirma antes de las 2:00 p. m. */}
+          {done.express ? (
+            <div className="mt-4 rounded-xl border-2 border-amber-400 bg-amber-50 px-4 py-3 text-left text-sm text-slate-700">
+              ⚡ <b className="text-ink">Envío EXPRESS asegurado:</b> llega <b className="text-ink">{eta(true)}</b>.
+              <span className="mt-1 block text-xs text-slate-500">Sale con prioridad el mismo día que confirmas (antes de las 2:00 p. m.).</span>
+            </div>
+          ) : (
+            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm text-slate-700">
+              🚚 Envío estándar: llega <b className="text-ink">{eta(false)}</b> (3 a 4 días hábiles).
+            </div>
           )}
         </div>
       </section>
