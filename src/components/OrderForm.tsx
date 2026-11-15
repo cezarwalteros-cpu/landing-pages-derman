@@ -19,6 +19,8 @@ const BUMP_OFFER = 'x1';
 type Field = 'first_name' | 'last_name' | 'phone' | 'city' | 'address1' | 'additional' | 'shipping_option' | 'payment_method';
 type Errors = Partial<Record<Field, string>>;
 
+const normCity = (v: string) =>
+  String(v || '').split(/[\/,]/)[0].normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
 const fmtPhone = (v: string) =>
   phone10(v).slice(0, 10).replace(/^(\d{3})(\d{0,3})(\d{0,4}).*/, (_m, a, b, c) => [a, b, c].filter(Boolean).join(' '));
 
@@ -52,6 +54,12 @@ export function OrderForm({ bundles, selected, onSelect, shipping, bump }: Props
   const [cityAct, setCityAct] = useState(-1);
   const cityReq = useRef(0);
   const cityTimer = useRef<number | undefined>(undefined);
+  // Valores al día para el auto-elegir ciudad (blur, respuesta tardía de la lista y clic en "Pedir")
+  const cityRef = useRef<Ciudad | null>(null);
+  const cityItemsRef = useRef<Ciudad[]>([]);
+  const cityItemsQ = useRef('');
+  const cityQRef = useRef('');
+  const cityInput = useRef<HTMLInputElement>(null);
 
   const phoneBlock = useRef<string | null>(null);
   const lastChecked = useRef('');
@@ -138,7 +146,9 @@ export function OrderForm({ bundles, selected, onSelect, shipping, bump }: Props
   // --- Ciudad ---
   function onCityInput(v: string) {
     setCityQ(v);
+    cityQRef.current = v;
     setCity(null);
+    cityRef.current = null;
     window.clearTimeout(cityTimer.current);
     const q = clean(v);
     if (q.length < 2) {
@@ -151,23 +161,49 @@ export function OrderForm({ bundles, selected, onSelect, shipping, bump }: Props
         .then((items) => {
           if (id !== cityReq.current) return;
           setCityItems(items);
+          cityItemsRef.current = items;
+          cityItemsQ.current = q;
           setCityAct(items.length ? 0 : -1);
           setCityOpen(true);
+          // escribió y salió del campo antes de que llegara la lista
+          if (!cityRef.current && document.activeElement !== cityInput.current) autoCity();
         })
         .catch(() => {});
     }, 180);
   }
   function pickCity(c: Ciudad) {
-    setCityQ(`${c.municipio}, ${c.departamento}`);
+    const label = `${c.municipio}, ${c.departamento}`;
+    setCityQ(label);
+    cityQRef.current = label;
     setCityOpen(false);
     if (c.solo_pago_anticipado) {
       setCity(null);
+      cityRef.current = null;
       setErr('city', `En ${c.municipio} no tenemos pago contra entrega por ahora.`);
     } else {
       setCity(c);
+      cityRef.current = c;
       setErr('city', undefined);
     }
     queueCart();
+  }
+  /* cesar 15-11 (igual que el checkout de Mg, C313): si lo escrito coincide con una sola ciudad de la lista, se toma sola
+     con su departamento; si coincide con varias, la lista queda abierta con "Toca tu ciudad". */
+  function autoCity(): Ciudad | null {
+    if (cityRef.current) return cityRef.current;
+    const items = cityItemsRef.current;
+    // la lista tiene que ser la de lo que está escrito ahora, no la de una búsqueda anterior
+    if (!items.length || cityItemsQ.current !== clean(cityQRef.current)) return null;
+    const typed = normCity(cityQRef.current);
+    const exact = items.filter((c) => normCity(c.municipio) === typed);
+    const one = items.length === 1 ? items[0] : exact.length === 1 ? exact[0] : null;
+    if (one) {
+      pickCity(one);
+      return cityRef.current;
+    }
+    setCityOpen(true);
+    setErr('city', 'Toca tu ciudad en la lista');
+    return null;
   }
   function onCityKey(e: React.KeyboardEvent<HTMLInputElement>) {
     if (!cityOpen || !cityItems.length) return;
@@ -184,10 +220,21 @@ export function OrderForm({ bundles, selected, onSelect, shipping, bump }: Props
   }
   function onCityBlur() {
     window.setTimeout(() => {
-      if (!city && cityItems.length === 1 && cityOpen) pickCity(cityItems[0]);
-      setCityOpen(false);
+      if (cityRef.current || autoCity()) return;
+      // si hay varias coincidencias la lista queda abierta; se cierra al tocar fuera
+      if (!cityItemsRef.current.length || !clean(cityQRef.current) || cityItemsQ.current !== clean(cityQRef.current)) setCityOpen(false);
     }, 150);
   }
+  useEffect(() => {
+    if (!cityOpen) return;
+    const close = (e: MouseEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (!t || t === cityInput.current || t.closest('#dmCityList') || t.closest('button[type="submit"]')) return;
+      setCityOpen(false);
+    };
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, [cityOpen]);
 
   function onFocusForm() {
     if (started.current) return;
@@ -201,10 +248,13 @@ export function OrderForm({ bundles, selected, onSelect, shipping, bump }: Props
     if (sending) return;
     setFormError('');
     const errs: Errors = {};
+    const cityNow = city || autoCity(); // si escribió la ciudad sin tocarla en la lista, se toma sola cuando coincide
     (Object.keys(rules) as (keyof typeof rules)[]).forEach((f) => {
-      const m = rules[f]();
+      const m = f === 'city' && cityNow ? null : rules[f]();
       if (m) errs[f] = m;
     });
+    if (errs.city && !cityNow && errors.city?.startsWith('En ') && cityQRef.current.includes(',')) errs.city = errors.city; // ciudad sin contra entrega: se conserva el aviso
+    else if (errs.city && !cityNow && cityItemsRef.current.length > 1 && cityItemsQ.current === clean(cityQRef.current)) errs.city = 'Toca tu ciudad en la lista';
     setErrors(errs);
     const first = Object.keys(errs)[0];
     // Embudo: clic en "Pedir" del formulario (igual que pedido.enerplu.com); ok = sin campos con error
@@ -221,7 +271,7 @@ export function OrderForm({ bundles, selected, onSelect, shipping, bump }: Props
         bump: bumpActive,
         upsell: false,
         customer: { first_name: clean(firstName), last_name: clean(lastName), phone: phone10(phone) },
-        address: { department: city!.departamento, city: city!.municipio, address1: clean(address1), additional: clean(additional) },
+        address: { department: cityNow!.departamento, city: cityNow!.municipio, address1: clean(address1), additional: clean(additional) },
         shipping_option: shipOpt,
         payment_method: 'cod',
         website,
@@ -390,7 +440,7 @@ export function OrderForm({ bundles, selected, onSelect, shipping, bump }: Props
           <FieldWrap f="city" label="Ciudad o municipio" error={errors.city}>
             <div className="relative">
               <MapPin className={`pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${city ? 'text-brand-600' : 'text-slate-400'}`} aria-hidden />
-              <input name="city_q" autoComplete="off" placeholder="Escribe y elige de la lista" maxLength={60} role="combobox"
+              <input ref={cityInput} name="city_q" autoComplete="off" placeholder="Escribe y elige de la lista" maxLength={60} role="combobox"
                 aria-expanded={cityOpen} aria-controls="dmCityList" aria-autocomplete="list"
                 value={cityQ} onChange={(e) => onCityInput(e.target.value)} onKeyDown={onCityKey} onBlur={onCityBlur}
                 className={`${fieldCls('city')} pl-9 ${city ? 'border-brand-500' : ''}`} />
