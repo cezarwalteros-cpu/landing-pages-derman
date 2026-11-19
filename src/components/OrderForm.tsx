@@ -106,10 +106,13 @@ export function OrderForm({ bundles, selected, onSelect, shipping, bump }: Props
     const p = phone10(phone);
     if (DRY_RUN || done || !/^3\d{9}$/.test(p)) return;
     const name = clean(`${firstName} ${lastName}`);
-    const key = [p, name, bundle.id, bumpActive].join('|');
+    // todo lo que alcanzó a escribir va al carrito, para que la IA no se lo vuelva a pedir
+    const cRef = cityRef.current;
+    const address = { city_text: clean(cityQRef.current).slice(0, 80), city: cRef?.municipio ?? '', department: cRef?.departamento ?? '', address1: clean(address1).slice(0, 160), additional: clean(additional).slice(0, 160) };
+    const key = JSON.stringify([p, name, bundle.id, bumpActive, address]);
     if (key === cartKey.current) return;
     cartKey.current = key;
-    api({ action: 'cart', phone: p, name, offer_key: bundle.id, bump: bumpActive, tracking: trackingPayload() }).catch(() => {});
+    api({ action: 'cart', phone: p, name, offer_key: bundle.id, bump: bumpActive, tracking: trackingPayload(), address }).catch(() => {});
   }
   const queueCart = () => {
     window.clearTimeout(cartTimer.current);
@@ -220,6 +223,7 @@ export function OrderForm({ bundles, selected, onSelect, shipping, bump }: Props
   }
   function onCityBlur() {
     window.setTimeout(() => {
+      queueCart();
       if (cityRef.current || autoCity()) return;
       // si hay varias coincidencias la lista queda abierta; se cierra al tocar fuera
       if (!cityItemsRef.current.length || !clean(cityQRef.current) || cityItemsQ.current !== clean(cityQRef.current)) setCityOpen(false);

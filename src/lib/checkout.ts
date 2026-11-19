@@ -36,6 +36,7 @@ export type ApiResult = {
 export async function api(body: Record<string, unknown>): Promise<ApiResult> {
   const r = await fetch(CHECKOUT_API, {
     method: 'POST',
+    keepalive: body.action === 'cart',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ slug: CHECKOUT_SLUG, session_id: SID, ...body }),
   });
