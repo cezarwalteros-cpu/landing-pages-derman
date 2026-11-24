@@ -6,6 +6,8 @@ const isVideo = (src: string) => /\.(mp4|webm|mov)(\?|$)/i.test(src) || src.incl
 // Si el video está en Cloudinary, se pide comprimido (calidad automática, 720 px, códec compatible)
 // y se genera una portada con el primer cuadro, para que la página no quede pesada.
 function cloudinaryVideo(src: string) {
+  // Video guardado en el propio sitio (public/cl/vid): ya viene comprimido y su portada es el .jpg del mismo nombre.
+  if (src.startsWith('/cl/vid/')) return { video: src, poster: src.replace(/\.mp4$/i, '.jpg') };
   if (!src.includes('res.cloudinary.com') || !src.includes('/video/upload/')) return { video: src, poster: undefined };
   const [base, rest] = src.split('/video/upload/');
   const path = rest.replace(/^([a-z]{1,3}_[^/]+\/)+/i, ''); // quita transformaciones previas

@@ -1,0 +1,33 @@
+# Copia al repo (public/cl/) los archivos que estaban en Cloudinary, según tools/cloudinary-archivos.txt.
+# Se corre a mano o al cambiar la lista. Si un archivo falla, el paso falla y no se guarda nada.
+name: copiar-cloudinary
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/project-thread-9n88og]
+    paths: [tools/cloudinary-archivos.txt, .github/workflows/copiar-cloudinary.yml]
+permissions:
+  contents: write
+jobs:
+  copiar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bajar archivos
+        run: |
+          set -euo pipefail
+          grep -v "^#" tools/cloudinary-archivos.txt | while read -r destino origen; do
+            [ -z "$destino" ] && continue
+            mkdir -p "public/$(dirname "$destino")"
+            curl -fsSL --retry 3 -H "Accept: image/webp,image/*;q=0.8,*/*;q=0.5" -o "public/$destino" "$origen"
+            test -s "public/$destino"
+            echo "$destino $(stat -c %s "public/$destino") bytes $(file -b "public/$destino" | cut -c1-40)"
+          done
+      - name: Guardar en el repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f public/cl
+          git diff --cached --quiet && echo "nada nuevo" && exit 0
+          git commit -m "Archivos de Cloudinary guardados en el repo (public/cl)"
+          git push
