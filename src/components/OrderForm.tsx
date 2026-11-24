@@ -618,14 +618,14 @@ export function OrderForm({ bundles, selected, onSelect, shipping, bump }: Props
           )}
 
           <button type="submit" disabled={sending}
-            className="flex w-full items-center justify-between gap-3 rounded-2xl bg-brand-600 px-5 py-4 text-left text-white shadow-lg transition hover:bg-brand-700 disabled:cursor-wait disabled:opacity-70">
+            className="flex w-full items-center justify-between gap-3 rounded-2xl bg-green-600 px-5 py-4 text-left text-white shadow-lg transition hover:bg-green-700 disabled:cursor-wait disabled:opacity-70">
             <span className="flex items-center gap-2">
               {sending ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : <Lock className="h-5 w-5" aria-hidden />}
               <span>
                 <b className="block text-sm font-extrabold leading-tight md:text-base">
                   {sending ? 'Enviando tu pedido…' : 'CONFIRMAR MI PEDIDO Y PAGAR AL RECIBIR'}
                 </b>
-                <small className="text-xs text-brand-100">Pagas en efectivo al recibir</small>
+                <small className="text-xs text-green-100">Pagas en efectivo al recibir</small>
               </span>
             </span>
             <span className="text-lg font-extrabold">{copShort(total)}</span>
