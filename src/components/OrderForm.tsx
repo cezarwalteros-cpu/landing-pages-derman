@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Loader2, Lock, MapPin, Truck } from 'lucide-react';
 import { UNIT_PRICE, type Bundle } from '../config';
-import { api, buscarCiudad, clean, DRY_RUN, eta, phone10, type Bump, type Ciudad, type Shipping } from '../lib/checkout';
+import { api, buscarCiudad, clean, DRY_RUN, eta, idemKey, idemReset, phone10, type Bump, type Ciudad, type Shipping } from '../lib/checkout';
 import { copShort } from '../lib/format';
 import { pixel, track, trackingPayload } from '../lib/tracking';
 
@@ -43,6 +43,7 @@ export function OrderForm({ bundles, selected, onSelect, shipping, bump }: Props
     setDup(wa ? { wa, n: String(j.order_number || ''), msg: String(j.message || j.error || '') } : null);
   };
   const [sending, setSending] = useState(false);
+  const sendingRef = useRef(false); // el estado de React tarda un render: sin esto, dos toques seguidos enviaban dos veces
   const [done, setDone] = useState<{ number: string; total: number; express: boolean } | null>(null);
   const [bumpOn, setBumpOn] = useState(false);
 
@@ -89,17 +90,54 @@ export function OrderForm({ bundles, selected, onSelect, shipping, bump }: Props
   const setErr = (f: Field, msg?: string) => setErrors((e) => ({ ...e, [f]: msg }));
 
   const rules: Record<Exclude<Field, 'shipping_option' | 'payment_method'>, () => string | null> = {
-    first_name: () => (clean(firstName).length >= 2 ? null : 'Escribe tu nombre'),
-    last_name: () => (clean(lastName).length >= 2 ? null : 'Escribe tu apellido'),
-    phone: () => (/^3\d{9}$/.test(phone10(phone)) ? phoneBlock.current : 'Número inválido: 10 dígitos y empieza por 3'),
-    city: () => (city ? null : 'Escribe tu ciudad y elígela de la lista'),
+    // P0 (cesar 23-11): un solo nombre basta; el apellido ya no bloquea el pedido. Mensajes exactos de cesar.
+    first_name: () => (/[A-Za-zÀ-ÿ]{2}/.test(clean(firstName)) ? null : 'Escribe tu nombre para recibir el pedido'),
+    last_name: () => null,
+    phone: () => (/^3\d{9}$/.test(phone10(phone)) ? phoneBlock.current : phone10(phone).length < 10 ? 'Ingresa los 10 dígitos de tu celular' : 'Revisa tu número de celular colombiano'),
+    city: () => (city ? null : 'Selecciona tu ciudad de la lista'),
     address1: () => {
       const t = clean(address1);
+      if (!t) return 'Escribe la dirección donde recibirás tu pedido';
       return t.length >= 6 && /\d/.test(t) ? null : 'Escribe la dirección completa (calle y número)';
     },
-    additional: () => (clean(additional).length >= 3 ? null : 'Escribe barrio, apto, casa o una referencia'),
+    additional: () => null, // barrio opcional, como en ENERPLU y Mg: si viene vacío se confirma por WhatsApp
   };
   const checkField = (f: keyof typeof rules) => setErr(f, rules[f]() ?? undefined);
+
+  // P0 #7: lo escrito se guarda en la pestaña y vuelve si la página se recarga; se borra al quedar hecho el pedido.
+  const draftReady = useRef(false);
+  useEffect(() => {
+    try {
+      const d = JSON.parse(sessionStorage.getItem('dm_draft') || 'null');
+      if (d) {
+        if (d.n) setFirstName(d.n);
+        if (d.l) setLastName(d.l);
+        if (d.t) setPhone(d.t);
+        if (d.a) setAddress1(d.a);
+        if (d.b) setAdditional(d.b);
+        if (d.ct) { setCityQ(d.ct); cityQRef.current = d.ct; }
+        if (d.c && d.c.municipio) { setCity(d.c); cityRef.current = d.c; }
+      }
+    } catch { /* sin borrador */ }
+    window.setTimeout(() => { draftReady.current = true; }, 0); // el primer guardado no debe pisar el borrador con campos vacíos
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!draftReady.current || done) return;
+    try { sessionStorage.setItem('dm_draft', JSON.stringify({ n: firstName, l: lastName, t: phone, a: address1, b: additional, ct: cityQ, c: city })); } catch { /* */ }
+  }, [firstName, lastName, phone, address1, additional, cityQ, city, done]);
+
+  // Aviso junto al botón: todo toque en "Pedir" deja una reacción visible; se actualiza al corregir.
+  const LABEL: Record<string, string> = { first_name: 'tu nombre', phone: 'tu celular', city: 'tu ciudad', address1: 'tu dirección' };
+  const [missOn, setMissOn] = useState(false);
+  const missText = (bad: string[]) => {
+    const n = bad.map((k) => LABEL[k] || k);
+    return bad.length >= 4 ? 'Completa tus datos de envío para hacer el pedido.' : 'Te falta ' + (n.length > 1 ? n.slice(0, -1).join(', ') + ' y ' + n[n.length - 1] : n[0]) + '.';
+  };
+  useEffect(() => {
+    if (!missOn) return;
+    const bad = (Object.keys(rules) as (keyof typeof rules)[]).filter((f) => rules[f]());
+    if (bad.length) setFormError(missText(bad)); else { setFormError(''); setMissOn(false); }
+  }, [firstName, phone, address1, city]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- Carrito abandonado: en cuanto hay celular válido ---
   function sendCart() {
@@ -205,7 +243,7 @@ export function OrderForm({ bundles, selected, onSelect, shipping, bump }: Props
       return cityRef.current;
     }
     setCityOpen(true);
-    setErr('city', 'Toca tu ciudad en la lista');
+    setErr('city', 'Selecciona tu ciudad de la lista');
     return null;
   }
   function onCityKey(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -249,7 +287,7 @@ export function OrderForm({ bundles, selected, onSelect, shipping, bump }: Props
   // --- Envío del pedido ---
   async function submit(ev: React.FormEvent) {
     ev.preventDefault();
-    if (sending) return;
+    if (sending || sendingRef.current) return;
     setFormError('');
     const errs: Errors = {};
     const cityNow = city || autoCity(); // si escribió la ciudad sin tocarla en la lista, se toma sola cuando coincide
@@ -258,15 +296,22 @@ export function OrderForm({ bundles, selected, onSelect, shipping, bump }: Props
       if (m) errs[f] = m;
     });
     if (errs.city && !cityNow && errors.city?.startsWith('En ') && cityQRef.current.includes(',')) errs.city = errors.city; // ciudad sin contra entrega: se conserva el aviso
-    else if (errs.city && !cityNow && cityItemsRef.current.length > 1 && cityItemsQ.current === clean(cityQRef.current)) errs.city = 'Toca tu ciudad en la lista';
+    else if (errs.city && !cityNow && cityItemsRef.current.length > 1 && cityItemsQ.current === clean(cityQRef.current)) errs.city = 'Selecciona tu ciudad de la lista';
     setErrors(errs);
     const first = Object.keys(errs)[0];
     // Embudo: clic en "Pedir" del formulario (igual que pedido.enerplu.com); ok = sin campos con error
     track('cta_click', { from: 'form', plan: bundle.id, ok: !first });
     if (first) {
-      document.querySelector<HTMLElement>(`[data-f="${first}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setFormError(missText(Object.keys(errs))); setMissOn(true);
+      const w = document.querySelector<HTMLElement>(`[data-f="${first}"]`);
+      // el foco va dentro del mismo toque (así el celular abre el teclado, también en Facebook / Instagram)
+      try { w?.querySelector<HTMLInputElement>('input')?.focus({ preventScroll: true }); } catch { /* */ }
+      try { w?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch { w?.scrollIntoView(); }
       return;
     }
+    setMissOn(false);
+    if (sendingRef.current) return;
+    sendingRef.current = true;
     setSending(true);
     try {
       const j = await api({
@@ -275,9 +320,10 @@ export function OrderForm({ bundles, selected, onSelect, shipping, bump }: Props
         bump: bumpActive,
         upsell: false,
         customer: { first_name: clean(firstName), last_name: clean(lastName), phone: phone10(phone) },
-        address: { department: cityNow!.departamento, city: cityNow!.municipio, address1: clean(address1), additional: clean(additional) },
+        address: { department: cityNow!.departamento, city: cityNow!.municipio, address1: clean(address1), additional: clean(additional) || 'Sin barrio: confirmar por WhatsApp' },
         shipping_option: shipOpt,
         payment_method: 'cod',
+        idempotency_key: idemKey(),
         website,
         tracking: trackingPayload(),
         ...(DRY_RUN ? { dry_run: true } : {}),
@@ -290,10 +336,15 @@ export function OrderForm({ bundles, selected, onSelect, shipping, bump }: Props
           });
           setErrors((e) => ({ ...e, ...mapped }));
         }
-        setFormError(j.error || 'No pudimos registrar tu pedido. Intenta de nuevo.');
+        setFormError(j.error || 'No pudimos registrar tu pedido. Inténtalo nuevamente.');
         readDup(j);
         return;
       }
+      if (!j.order_number) { // sin número de pedido no se muestra éxito
+        setFormError('No pudimos registrar tu pedido. Inténtalo nuevamente.');
+        return;
+      }
+      idemReset();
       window.clearTimeout(cartTimer.current);
       const t = j.total_cop || total;
       if (j.event_id && j.event_id !== 'dry_run') {
@@ -302,8 +353,9 @@ export function OrderForm({ bundles, selected, onSelect, shipping, bump }: Props
       setDone({ number: j.order_number || '', total: t, express: Number(j.shipping_cop) > 0 || !!priority });
       window.setTimeout(() => document.getElementById('pedido')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
     } catch {
-      setFormError('No pudimos registrar tu pedido. Revisa tu conexión e inténtalo de nuevo.');
+      setFormError('No pudimos enviar el pedido. Tus datos siguen guardados. Intenta nuevamente.');
     } finally {
+      sendingRef.current = false;
       setSending(false);
     }
   }
@@ -435,7 +487,7 @@ export function OrderForm({ bundles, selected, onSelect, shipping, bump }: Props
           <FieldWrap f="phone" label="Celular / WhatsApp" error={errors.phone}>
             <div className="flex">
               <span className="flex items-center rounded-l-xl border border-r-0 border-slate-300 bg-slate-50 px-3 text-sm font-bold text-slate-600">+57</span>
-              <input name="phone" type="tel" inputMode="numeric" autoComplete="tel-national" placeholder="300 123 4567" maxLength={14}
+              <input name="phone" type="tel" inputMode="numeric" autoComplete="tel-national" placeholder="300 123 4567" maxLength={20}
                 value={phone} onChange={(e) => { setPhone(fmtPhone(e.target.value)); phoneBlock.current = null; setDup(null); }} onBlur={onPhoneBlur}
                 className={`${fieldCls('phone')} rounded-l-none`} />
             </div>
@@ -473,7 +525,7 @@ export function OrderForm({ bundles, selected, onSelect, shipping, bump }: Props
               className={fieldCls('address1')} />
           </FieldWrap>
 
-          <FieldWrap f="additional" label="Barrio y referencia" error={errors.additional}>
+          <FieldWrap f="additional" label="Barrio y referencia (opcional)" error={errors.additional}>
             <input name="additional" placeholder="Barrio, apto, casa o una referencia" maxLength={160} value={additional}
               onChange={(e) => setAdditional(e.target.value)} onBlur={() => { if (additional) checkField('additional'); queueCart(); }}
               className={fieldCls('additional')} />
@@ -566,14 +618,14 @@ export function OrderForm({ bundles, selected, onSelect, shipping, bump }: Props
           )}
 
           <button type="submit" disabled={sending}
-            className="flex w-full items-center justify-between gap-3 rounded-2xl bg-brand-600 px-5 py-4 text-left text-white shadow-lg transition hover:bg-brand-700 disabled:cursor-wait disabled:opacity-70">
+            className="flex w-full items-center justify-between gap-3 rounded-2xl bg-green-600 px-5 py-4 text-left text-white shadow-lg transition hover:bg-green-700 disabled:cursor-wait disabled:opacity-70">
             <span className="flex items-center gap-2">
               {sending ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : <Lock className="h-5 w-5" aria-hidden />}
               <span>
                 <b className="block text-sm font-extrabold leading-tight md:text-base">
                   {sending ? 'Enviando tu pedido…' : 'CONFIRMAR MI PEDIDO Y PAGAR AL RECIBIR'}
                 </b>
-                <small className="text-xs text-brand-100">Pagas en efectivo al recibir</small>
+                <small className="text-xs text-green-100">Pagas en efectivo al recibir</small>
               </span>
             </span>
             <span className="text-lg font-extrabold">{copShort(total)}</span>
@@ -590,7 +642,7 @@ function FieldWrap({ f, label, error, children }: { f: string; label: string; er
     <div data-f={f}>
       <label className="mb-1 block text-sm font-semibold text-slate-700">{label}</label>
       {children}
-      {error && <span className="mt-1 block text-xs font-medium text-red-600">{error}</span>}
+      {error && <span role="alert" className="mt-1 block text-xs font-medium text-red-600">{error}</span>}
     </div>
   );
 }

@@ -34,14 +34,22 @@ export type ApiResult = {
 };
 
 export async function api(body: Record<string, unknown>): Promise<ApiResult> {
-  const r = await fetch(CHECKOUT_API, {
-    method: 'POST',
-    keepalive: body.action === 'cart',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ slug: CHECKOUT_SLUG, session_id: SID, ...body }),
-  });
-  const j = await r.json().catch(() => ({}));
-  return { status: r.status, ...j };
+  // P0 (cesar 23-11): el pedido tiene límite de 25 s; con mala señal el botón vuelve y se puede reintentar.
+  const ctl = body.action === 'order' && window.AbortController ? new AbortController() : null;
+  const t = ctl ? window.setTimeout(() => ctl.abort(), 25000) : 0;
+  try {
+    const r = await fetch(CHECKOUT_API, {
+      method: 'POST',
+      keepalive: body.action === 'cart',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: CHECKOUT_SLUG, session_id: SID, ...body }),
+      ...(ctl ? { signal: ctl.signal } : {}),
+    });
+    const j = await r.json().catch(() => ({}));
+    return { status: r.status, ...j };
+  } finally {
+    window.clearTimeout(t);
+  }
 }
 
 // Registra "abrió el checkout" (embudo del CRM) cuando el cliente llega cerca del formulario, igual que pedido.enerplu.com
@@ -95,10 +103,26 @@ export async function buscarCiudad(q: string): Promise<Ciudad[]> {
 
 export const clean = (v: unknown) => String(v ?? '').replace(/\s+/g, ' ').trim();
 export const phone10 = (v: unknown) => {
+  // P0 (cesar 23-11): acepta 3001234567, 300 123 4567, +57 3001234567, 0057… y 0300…; siempre deja los 10 dígitos
   let d = String(v ?? '').replace(/\D/g, '');
-  if (d.length === 12 && d.startsWith('57')) d = d.slice(2);
-  return d;
+  if (d.startsWith('0057')) d = d.slice(4);
+  else if (d.length > 10 && d.startsWith('57')) d = d.slice(2);
+  if (d.length === 11 && d.startsWith('0')) d = d.slice(1);
+  return d.slice(0, 10);
 };
+
+// Clave de idempotencia: la misma en todos los reintentos del mismo pedido (vive en la pestaña); el servidor nunca crea dos.
+const newKey = () => {
+  try { if (window.crypto && crypto.randomUUID) return crypto.randomUUID(); } catch { /* sin crypto */ }
+  return 'k' + Date.now().toString(36) + Math.random().toString(36).slice(2, 12) + Math.random().toString(36).slice(2, 12);
+};
+export function idemKey(): string {
+  let k: string | null = null;
+  try { k = sessionStorage.getItem('dm_idem'); } catch { /* sin sessionStorage */ }
+  if (!k) { k = newKey(); try { sessionStorage.setItem('dm_idem', k); } catch { /* */ } }
+  return k;
+}
+export function idemReset() { try { sessionStorage.removeItem('dm_idem'); sessionStorage.removeItem('dm_draft'); } catch { /* */ } }
 
 // Fecha estimada de entrega (días hábiles, festivos de Colombia)
 const HOLIDAYS = new Set([
