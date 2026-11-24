@@ -1,0 +1,11 @@
+# Archivos que vivían en Cloudinary y ahora se guardan en el repo (cesar 2026-11-24: "no depender de Cloudinary").
+# destino (dentro de public/)   origen
+cl/img/galeria-1-hero.webp https://res.cloudinary.com/dzlys7ftg/image/upload/v1793928215/gallery-1.1-hero-derman_tvcgt4.webp
+cl/img/galeria-2-zonas.webp https://res.cloudinary.com/dzlys7ftg/image/upload/v1793419265/gallery-2-zonas-dolor_ulb74p.webp
+cl/img/galeria-3-mecanismo.webp https://res.cloudinary.com/dzlys7ftg/image/upload/v1793419266/gallery-3-mecanismo-antifungico_tkkb21.webp
+cl/img/galeria-4-empaque.webp https://res.cloudinary.com/dzlys7ftg/image/upload/v1793419266/gallery-4-empaque-discreto_zlx86u.webp
+cl/img/galeria-5-evolucion.webp https://res.cloudinary.com/dzlys7ftg/image/upload/v1793419266/gallery-5-evolucion-alivio_toc9mo.webp
+cl/img/galeria-6-combo.webp https://res.cloudinary.com/dzlys7ftg/image/upload/v1793419266/gallery-6-combo-tratamiento_gw7odt.webp
+cl/img/galeria-4-empaque-w900.webp https://res.cloudinary.com/dzlys7ftg/image/upload/w_900,q_auto,f_auto/v1793419266/gallery-4-empaque-discreto_zlx86u.webp
+cl/vid/textura.mp4 https://res.cloudinary.com/dzlys7ftg/video/upload/q_auto:eco,w_720,vc_auto/v1793419934/gemini_generated_video_d701dcf2_sbagz9.mp4
+cl/vid/textura.jpg https://res.cloudinary.com/dzlys7ftg/video/upload/so_0,w_720,q_auto/v1793419934/gemini_generated_video_d701dcf2_sbagz9.jpg
